@@ -1,0 +1,5 @@
+name: BlockIdiotPackets
+author: insertt
+version: 1.0-SNAPSHOT
+main: pl.insertt.blockidiotpackets.bukkit.BlockIdiotsPacketPlugin
+description: Block fucking idiot packets on 1.7
