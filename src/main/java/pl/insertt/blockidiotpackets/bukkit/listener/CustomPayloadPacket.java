@@ -138,9 +138,9 @@ public class CustomPayloadPacket extends PacketAdapter
                 buffer.release();
             }
         }
-        catch(Exception ex)
+        catch(Throwable th)
         {
-            plugin.getLogger().log(java.util.logging.Level.SEVERE, "[BlockIdiotPackets] " + ex.getMessage());
+            plugin.getLogger().log(java.util.logging.Level.SEVERE, "[BlockIdiotPackets] " + th.getMessage());
         }
     }
 
