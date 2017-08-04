@@ -11,6 +11,7 @@ import com.comphenix.protocol.wrappers.nbt.NbtList;
 import com.google.common.base.Charsets;
 import net.minecraft.util.io.netty.buffer.ByteBuf;
 import org.apache.commons.lang.ArrayUtils;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import pl.insertt.blockidiotpackets.ExploitAttemptException;
@@ -18,6 +19,7 @@ import pl.insertt.blockidiotpackets.bukkit.BlockIdiotPacketsPlugin;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -39,7 +41,6 @@ public class CustomPayloadPacket extends PacketAdapter
     }
 
     @Override
-    @Deprecated
     public void onPacketReceiving(final PacketEvent event)
     {
         Player p = event.getPlayer();
@@ -84,6 +85,13 @@ public class CustomPayloadPacket extends PacketAdapter
                     buffer.release();
                 }
             }
+            else if("MC|BEdit".equals(packetName) || "MC|BSign".equals(packetName))
+            {
+                if(event.getPlayer().getItemInHand() != null && event.getPlayer().getItemInHand().getType() == Material.BOOK_AND_QUILL || event.getPlayer().getItemInHand().getType() == Material.WRITTEN_BOOK && event.getPlayer().getItemInHand().getEnchantments().size() > 0)
+                {
+                    throw new ExploitAttemptException(p.getName() + " tried to create invalid book!");
+                }
+            }
             else if(lastUse == -1L | System.currentTimeMillis() - lastUse > 100L)
             {
                 packetUsageTimers.put(p.getUniqueId(), System.currentTimeMillis());
@@ -94,19 +102,15 @@ public class CustomPayloadPacket extends PacketAdapter
             }
 
             PacketContainer container = event.getPacket();
-
             ByteBuf buffer = container.getSpecificModifier(ByteBuf.class).read(0).copy();
-
             byte[] bytes = new byte[buffer.readableBytes()];
-
             buffer.readBytes(bytes);
-
             DataInputStream input = new DataInputStream(new ByteArrayInputStream(bytes));
-
-            ItemStack itemStack = StreamSerializer.getDefault().deserializeItemStack(input);
 
             try
             {
+                ItemStack itemStack = StreamSerializer.getDefault().deserializeItemStack(input);
+
                 if (itemStack == null)
                 {
                     return;
@@ -120,26 +124,28 @@ public class CustomPayloadPacket extends PacketAdapter
 
                     if (pages.size() > 50)
                     {
-                        throw new ExploitAttemptException("Book with pages > 50, by: " + p.getName());
+                        throw new ExploitAttemptException(p.getName() + " tried to create book with pages > 50");
                     }
 
                     for (String page : pages)
                     {
                         if (page.length() > 257)
                         {
-                            throw new ExploitAttemptException("Length of page > 257, by: " + p.getName());
+                            throw new ExploitAttemptException(p.getName() + " tried to create book with length of page > 257");
                         }
                     }
                 }
-            }
-            finally
-            {
                 input.close();
                 buffer.release();
             }
+            catch(IOException ex)
+            {
+                ex.printStackTrace();
+            }
         }
-        catch(Throwable th)
+        catch(ExploitAttemptException th)
         {
+            event.setCancelled(true);
             plugin.getLogger().log(java.util.logging.Level.SEVERE, "[BlockIdiotPackets] " + th.getMessage());
         }
     }
@@ -148,5 +154,4 @@ public class CustomPayloadPacket extends PacketAdapter
     {
         return packetUsageTimers;
     }
-
 }
